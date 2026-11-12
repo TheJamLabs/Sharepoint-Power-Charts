@@ -1,0 +1,324 @@
+$spc-card-bg: #ffffff;
+$spc-border: #edebe9;
+$spc-radius: 8px;
+$spc-shadow: 0 1.6px 3.6px rgba(0, 0, 0, 0.08), 0 0.3px 0.9px rgba(0, 0, 0, 0.1);
+$spc-shadow-hover: 0 4px 10px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.12);
+$spc-muted: #605e5c;
+$spc-heading: #201f1e;
+$spc-good: #0f7b0f;
+$spc-bad: #c50f1f;
+
+.root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: $spc-heading;
+  min-height: 120px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.subtitle {
+  color: $spc-muted;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.gridItem {
+  min-width: 0;
+}
+
+.card {
+  background: $spc-card-bg;
+  border: 1px solid $spc-border;
+  border-radius: $spc-radius;
+  box-shadow: $spc-shadow;
+  padding: 16px;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  &:hover {
+    box-shadow: $spc-shadow-hover;
+  }
+}
+
+.cardHeader {
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: $spc-muted;
+  margin: 0;
+}
+
+.cardBody {
+  flex: 1;
+  min-height: 0;
+}
+
+.cardLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 260px;
+}
+
+.cardDebug {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: $spc-muted;
+  background: #faf9f8;
+  border: 1px solid $spc-border;
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* --------------------------------------------------------------- Filter hub */
+.hubFields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* ------------------------------------------------------------------ KPI */
+.kpiValue {
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1.05;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiDelta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.kpiDeltaUp {
+  color: $spc-good;
+  background: rgba(15, 123, 15, 0.1);
+}
+
+.kpiDeltaDown {
+  color: $spc-bad;
+  background: rgba(197, 15, 31, 0.1);
+}
+
+.kpiDeltaFlat {
+  color: $spc-muted;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.sparkline {
+  height: 36px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+/* ---------------------------------------------------------------- Chart */
+.chart {
+  position: relative;
+  height: 260px;
+  width: 100%;
+}
+
+.chartWithInfo {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+
+  .chart {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.spcInfo {
+  flex: 0 0 240px;
+  max-width: 240px;
+  min-width: 0;
+  background: #faf9f8;
+  border: 1px solid $spc-border;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: $spc-heading;
+}
+
+.spcInfoTitle {
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.spcSection + .spcSection {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid $spc-border;
+}
+
+.spcSeriesName {
+  font-weight: 600;
+  color: $spc-muted;
+  margin-bottom: 4px;
+}
+
+.spcStats {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+
+.spcStatusStable {
+  color: $spc-good;
+  font-weight: 600;
+}
+
+.spcStatusOut {
+  color: $spc-bad;
+  font-weight: 600;
+}
+
+.spcSignalsTitle {
+  margin-top: 8px;
+  font-weight: 600;
+  color: $spc-muted;
+}
+
+.spcSignals {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.spcSignalRising {
+  color: $spc-bad;
+}
+
+.spcSignalFalling {
+  color: #005a9e;
+}
+
+.spcNoSignals {
+  color: $spc-good;
+  margin-top: 4px;
+}
+
+.spcDisclaimer {
+  margin-top: 10px;
+  color: $spc-muted;
+  font-size: 11px;
+  line-height: 1.4;
+  border-top: 1px solid $spc-border;
+  padding-top: 8px;
+}
+
+.chartEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 260px;
+  color: $spc-muted;
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------- Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid $spc-border;
+  vertical-align: top;
+}
+
+.table th {
+  font-weight: 600;
+  color: $spc-muted;
+  position: sticky;
+  top: 0;
+  background: #faf9f8;
+}
+
+.table tbody tr:hover {
+  background: #f3f2f1;
+}
+
+.tableCellNumber {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.thNum {
+  text-align: right;
+}
+
+.subtotalRow td {
+  background: #edebe9;
+  font-weight: 600;
+  border-top: 2px solid #d2d0ce;
+}
+
+.groupRow td {
+  background: #f3f2f1;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* ------------------------------------------------------------ Empty state */
+.empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: $spc-muted;
+}
+
+.emptyTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: $spc-heading;
+  margin: 0 0 8px;
+}

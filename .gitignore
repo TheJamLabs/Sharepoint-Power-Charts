@@ -1,0 +1,16 @@
+node_modules
+lib
+temp
+dist
+release
+solution
+*.sppkg
+*.log
+.vs
+config/.env
+
+# Local data exports — not for the public source repo
+*.csv
+*.xlsx
+Example-Data/
+concat
