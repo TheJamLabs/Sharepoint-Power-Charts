@@ -94,24 +94,51 @@ export function flattenFieldValue(value: unknown): string | number | boolean | D
 }
 
 /**
+ * Normalized per-list cache: raw fetch promise → fully normalized LoadedSource.
+ * Keyed by raw-promise identity so it shares the web part's cache lifecycle
+ * (same raw promise = same rows) and invalidates itself the moment a refresh
+ * swaps in a new raw promise. An entry per listId is kept, so repeated
+ * background refreshes overwrite rather than accumulate.
+ */
+const normalizedCache: { [listId: string]: { raw: Promise<unknown[]>; loaded: Promise<LoadedSource> } } = {};
+
+/**
  * Loads a SharePoint list through REST. The actual HTTP call is delegated to a
  * provided fetcher so the data layer stays context-agnostic and testable.
  */
 export class SharePointListDataSource implements IDataSource {
   public readonly kind = 'list' as const;
   public readonly name: string;
+  private readonly listId: string;
   private readonly fetch: FetchListItems;
 
   constructor(listId: string, listTitle: string, fetch: FetchListItems) {
     this.name = listTitle || `List ${listId}`;
+    this.listId = listId;
     this.fetch = fetch;
   }
 
-  public async load(): Promise<LoadedSource> {
-    const items = await this.fetch();
-    const rows = items.map((it) => this.toRow(it as Record<string, unknown>));
-    const columns = this.discoverColumns(rows);
-    return { name: this.name, rows, columns };
+  /**
+   * Load (and normalize) the list. The heavy work — flattening every field of
+   * every row plus column-kind discovery — runs once per distinct raw fetch,
+   * not once per caller: the web part hands the same raw promise to every
+   * source adapter for this list while its cache entry is valid, so viewers,
+   * hubs and the editor's column picker all share one `LoadedSource`. A new raw
+   * promise (after a background refresh) naturally rebuilds this entry.
+   */
+  public load(): Promise<LoadedSource> {
+    const raw = this.fetch();
+    const cached = normalizedCache[this.listId];
+    if (cached && cached.raw === raw) {
+      return cached.loaded;
+    }
+    const loaded = raw.then((items) => {
+      const rows = items.map((it) => this.toRow(it as Record<string, unknown>));
+      const columns = this.discoverColumns(rows);
+      return { name: this.name, rows, columns };
+    });
+    normalizedCache[this.listId] = { raw, loaded };
+    return loaded;
   }
 
   private toRow(item: Record<string, unknown>): DataRow {

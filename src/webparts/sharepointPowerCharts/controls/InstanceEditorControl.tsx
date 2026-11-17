@@ -25,6 +25,7 @@ import {
   InstanceConfig,
   InstanceRole,
   KpiBlockConfig,
+  MeasureStatusConfig,
   OrderDir,
   ReportSourceConfig,
   TableBlockConfig,
@@ -73,6 +74,9 @@ interface InstanceEditorState {
   columns: string[];
   columnsSourceId?: string;
   columnsLoading: boolean;
+  /** Column names of the configured status register source (for its column pickers). */
+  statusColumns: string[];
+  statusColumnsSourceId?: string;
 }
 
 /** A temporary default config when the stored value cannot be parsed. */
@@ -96,7 +100,8 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
     this.state = {
       config: parsed.config ? parsed.config : fallbackConfig(),
       columns: DEMO_CSV_HEADER.slice(),
-      columnsLoading: false
+      columnsLoading: false,
+      statusColumns: []
     };
     this.fileInputRef = React.createRef<HTMLInputElement>();
   }
@@ -108,6 +113,7 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
 
   public componentDidMount(): void {
     this.ensureColumns();
+    this.ensureStatusColumns();
     if (this.props.fetchLists) {
       this.loadLists();
     }
@@ -115,6 +121,7 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
 
   public componentDidUpdate(): void {
     this.ensureColumns();
+    this.ensureStatusColumns();
   }
 
   /** The source id whose columns drive the dropdown pickers (block or hub). */
@@ -144,6 +151,37 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
       () => {
         if (this.state.columnsSourceId === sid) {
           this.setState({ columnsLoading: false });
+        }
+      }
+    );
+  }
+
+  /** Load the status register source's columns once per register source change. */
+  private ensureStatusColumns(): void {
+    const status = this.state.config.status;
+    if (!status) {
+      if (this.state.statusColumnsSourceId !== undefined) {
+        this.setState({ statusColumns: [], statusColumnsSourceId: undefined });
+      }
+      return;
+    }
+    const sid = status.sourceId;
+    if (this.state.statusColumnsSourceId === sid) {
+      return;
+    }
+    this.setState({ statusColumns: [], statusColumnsSourceId: sid });
+    if (!this.props.onGetColumns) {
+      return;
+    }
+    this.props.onGetColumns(sid).then(
+      (names) => {
+        if (this.state.statusColumnsSourceId === sid) {
+          this.setState({ statusColumns: names });
+        }
+      },
+      () => {
+        if (this.state.statusColumnsSourceId === sid) {
+          this.setState({ statusColumns: [] });
         }
       }
     );
@@ -186,6 +224,9 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
     }
     if (config.hub && config.hub.sourceId === id) {
       config.hub = { ...config.hub, sourceId: fallbackId };
+    }
+    if (config.status && config.status.sourceId === id) {
+      config.status = undefined;
     }
     this.commit(config, true);
   }
@@ -252,12 +293,12 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
    * always present (even if it isn't in the fresh column list yet), and an
    * optional leading 'None' blank is added when `allowNone` is true.
    */
-  private columnDropdownOptions(allowNone: boolean, current?: string): { key: string; text: string; title?: string }[] {
+  private columnDropdownOptions(allowNone: boolean, current?: string, colsOverride?: string[]): { key: string; text: string; title?: string }[] {
     const opts: { key: string; text: string; title?: string }[] = [];
     if (allowNone) {
       opts.push({ key: '', text: 'None', title: 'None' });
     }
-    const cols = this.state.columns.slice();
+    const cols = (colsOverride || this.state.columns).slice();
     if (current && cols.indexOf(current) === -1) {
       cols.unshift(current);
     }
@@ -267,6 +308,38 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
       }
     });
     return opts;
+  }
+
+  // -------------------------------------------------- status register --
+  /** Select (or clear) the measure-register source that badges the card. */
+  private setStatusSource(sourceId: string): void {
+    const config = cloneInstance(this.state.config);
+    if (!sourceId) {
+      config.status = undefined;
+      this.commit(config);
+      return;
+    }
+    const existing = config.status;
+    config.status = {
+      sourceId,
+      keyColumn: (existing && existing.keyColumn) || 'MeasureKey',
+      // When re-selecting a register, keep its block-side key mapping: the
+      // register's key column and the block's filter column can differ (e.g.
+      // Data `MeasureKey` vs register `publication_key`).
+      keyFilterColumn: existing && existing.keyFilterColumn,
+      statusColumn: (existing && existing.statusColumn) || 'Status'
+    };
+    this.commit(config);
+  }
+
+  /** Merge a partial into the instance's `status` config (no-op when unset). */
+  private patchStatus(patch: Partial<MeasureStatusConfig>): void {
+    const config = cloneInstance(this.state.config);
+    if (!config.status) {
+      return;
+    }
+    config.status = { ...config.status, ...patch };
+    this.commit(config);
   }
 
   private aggOptions(): { key: string; text: string; title?: string }[] {
@@ -914,6 +987,22 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
           onChange={(_e, opt) => opt && this.setRole(opt.key as InstanceRole)}
         />
 
+        <Dropdown
+          label="Data as-of column (optional)"
+          placeholder="Auto — newest Modified, else latest date"
+          options={[
+            { key: '', text: 'Auto — newest Modified, else latest date' },
+            ...this.columnDropdownOptions(false, config.dataAsOfColumn)
+          ]}
+          selectedKey={config.dataAsOfColumn || ''}
+          onChange={(_e, opt) => {
+            const next = cloneInstance(config);
+            next.dataAsOfColumn = opt && opt.key ? String(opt.key) : undefined;
+            this.commit(next);
+          }}
+          styles={{ root: { marginTop: 12 } }}
+        />
+
         {!isHub ? (
           <>
             <div style={{ marginTop: 12 }}>{this.renderBlockEditors()}</div>
@@ -937,6 +1026,39 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
               checked={!!config.debug}
               styles={{ root: { marginTop: 12 } }}
             />
+            <Label styles={{ root: { marginTop: 16 } }}>Approval status register (optional)</Label>
+            <Dropdown
+              label="Register source"
+              placeholder="None — no status badges"
+              options={[{ key: '', text: 'None' }, ...this.sourceOptions()]}
+              selectedKey={config.status ? config.status.sourceId : ''}
+              onChange={(_e, opt) => this.setStatusSource(opt ? (opt.key as string) : '')}
+            />
+            {config.status ? (
+              <>
+                <Dropdown
+                  label="Measure key column"
+                  options={this.columnDropdownOptions(false, config.status.keyColumn || 'MeasureKey', this.state.statusColumns)}
+                  selectedKey={config.status.keyColumn || 'MeasureKey'}
+                  onChange={(_e, opt) => opt && this.patchStatus({ keyColumn: opt.key as string })}
+                />
+                <Dropdown
+                  label="Key filter column (block)"
+                  options={this.columnDropdownOptions(
+                    false,
+                    config.status.keyFilterColumn || config.status.keyColumn || 'MeasureKey'
+                  )}
+                  selectedKey={config.status.keyFilterColumn || config.status.keyColumn || 'MeasureKey'}
+                  onChange={(_e, opt) => opt && this.patchStatus({ keyFilterColumn: opt.key as string })}
+                />
+                <Dropdown
+                  label="Status column"
+                  options={this.columnDropdownOptions(false, config.status.statusColumn || 'Status', this.state.statusColumns)}
+                  selectedKey={config.status.statusColumn || 'Status'}
+                  onChange={(_e, opt) => opt && this.patchStatus({ statusColumn: opt.key as string })}
+                />
+              </>
+            ) : null}
           </>
         ) : (
           <div style={{ marginTop: 12 }}>{this.renderHubEditor()}</div>

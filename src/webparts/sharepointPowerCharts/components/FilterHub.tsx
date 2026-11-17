@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { ComboBox, Dropdown, IDropdownOption, Label, Spinner } from '@fluentui/react';
 import { DataColumn, DataRow, HubConfig, HubField, IDataSource } from '../data/types';
-import { orderedDistinctValues, applyFilters, parseFilterExpression } from '../data/query';
+import { orderedDistinctValues, applyFilters, parseFilterExpression, latestDataTimestamp } from '../data/query';
+import { formatDate } from '../utils/format';
 import { linkedFilterStore } from '../filter/filterStore';
 import styles from './SharepointPowerCharts.module.scss';
 
@@ -9,6 +10,15 @@ export interface FilterHubProps {
   hub: HubConfig;
   /** Maps the hub's source id to its adapter. */
   getSource: (sourceId: string) => IDataSource;
+  /** Optional date column whose latest value feeds the "Data as of" footer. */
+  dataAsOfColumn?: string;
+  /** The SharePoint list id behind the hub's source, for cache-refresh subscription. */
+  sourceListId?: string;
+  /**
+   * Optional hook into the web part's background cache refreshes; the callback
+   * fires after fresh rows were swapped in, so the dropdowns re-load silently.
+   */
+  subscribeListChanges?: (listId: string, cb: () => void) => () => void;
 }
 
 interface FilterHubState {
@@ -25,17 +35,22 @@ interface FilterHubState {
  */
 export default class FilterHub extends React.Component<FilterHubProps, FilterHubState> {
   private unsubscribe: (() => void) | null = null;
+  private listUnsubscribe: (() => void) | null = null;
+  /** Monotonic load token: only the most recent load may land its result. */
+  private loadSeq = 0;
 
   public state: FilterHubState = { rows: [], columns: [], loading: true };
 
   public componentDidMount(): void {
     this.unsubscribe = linkedFilterStore.subscribe(() => this.forceUpdate());
+    this.attachListRefresh();
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.loadSource();
   }
 
   public componentDidUpdate(prevProps: FilterHubProps): void {
     if (prevProps.hub.sourceId !== this.props.hub.sourceId) {
+      this.attachListRefresh();
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.loadSource();
     }
@@ -46,19 +61,55 @@ export default class FilterHub extends React.Component<FilterHubProps, FilterHub
       this.unsubscribe();
       this.unsubscribe = null;
     }
+    if (this.listUnsubscribe) {
+      this.listUnsubscribe();
+      this.listUnsubscribe = null;
+    }
   }
 
-  private loadSource(): void {
-    this.setState({ loading: true, error: undefined });
+  /**
+   * (Re)subscribe to the hub list's background refreshes so the dropdowns and
+   * the "Data as of" footer pull fresh rows the moment the cache is swapped.
+   */
+  private attachListRefresh(): void {
+    if (this.listUnsubscribe) {
+      this.listUnsubscribe();
+      this.listUnsubscribe = null;
+    }
+    const listId = this.props.sourceListId;
+    if (listId && this.props.subscribeListChanges) {
+      this.listUnsubscribe = this.props.subscribeListChanges(listId, () => {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        this.loadSource(true);
+      });
+    }
+  }
+
+  /**
+   * Load the hub source. `silent` skips the spinner (background cache refresh —
+   * keep current options visible until the new ones land). A monotonic token
+   * drops stale responses after a source change.
+   */
+  private loadSource(silent?: boolean): void {
+    const seq = ++this.loadSeq;
+    if (!silent) {
+      this.setState({ loading: true, error: undefined });
+    }
     this.props
       .getSource(this.props.hub.sourceId)
       .load()
       .then(
         (loaded) => {
-          this.setState({ rows: loaded.rows, columns: loaded.columns, loading: false });
-          this.applyDefaults(loaded.rows);
+          if (seq === this.loadSeq) {
+            this.setState({ rows: loaded.rows, columns: loaded.columns, loading: false });
+            this.applyDefaults(loaded.rows);
+          }
         },
-        (e) => this.setState({ loading: false, error: e instanceof Error ? e.message : String(e) })
+        (e) => {
+          if (seq === this.loadSeq) {
+            this.setState({ loading: false, error: e instanceof Error ? e.message : String(e) });
+          }
+        }
       );
   }
 
@@ -130,6 +181,7 @@ export default class FilterHub extends React.Component<FilterHubProps, FilterHub
 
   public render(): React.ReactElement<{}> {
     const { hub } = this.props;
+    const dataAsOf = latestDataTimestamp(this.state.rows, this.state.columns, this.props.dataAsOfColumn);
     let body: React.ReactNode;
     if (this.state.error) {
       body = <div className={styles.subtitle}>{this.state.error}</div>;
@@ -152,6 +204,9 @@ export default class FilterHub extends React.Component<FilterHubProps, FilterHub
           ) : null}
           {body}
         </div>
+        {dataAsOf ? (
+          <div className={styles.cardFooter}>Data as of: {formatDate(dataAsOf)}</div>
+        ) : null}
       </div>
     );
   }

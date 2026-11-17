@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { AggregationType, DataRow, FilterClause, FilterOperator, MeasureSpec, TimeBucket } from './types';
+import { AggregationType, DataColumn, DataRow, FilterClause, FilterOperator, MeasureSpec, TimeBucket } from './types';
 
 dayjs.extend(utc);
 
@@ -536,6 +536,36 @@ export function latestDate(rows: DataRow[], column: string): Date | null {
       best = v;
     }
   }
+  return best;
+}
+
+/**
+ * The most recent data timestamp in a source feeding the "Data as of" card
+ * footer. When `asOfColumn` is set, that column's latest value is used (e.g.
+ * `PeriodEnd` for a measure-data list); otherwise the newest internal
+ * `Modified` date wins when the source has one (SharePoint list items carry it
+ * on every fetched row — the last time the list data changed), and sources
+ * without it (the demo CSV) fall back to the latest value across every
+ * date-kind column. Returns null when no date value is present at all.
+ */
+export function latestDataTimestamp(rows: DataRow[], columns: DataColumn[], asOfColumn?: string): Date | null {
+  if (asOfColumn) {
+    return latestDate(rows, asOfColumn);
+  }
+  const modified = latestDate(rows, 'Modified');
+  if (modified) {
+    return modified;
+  }
+  let best: Date | null = null;
+  columns.forEach((c) => {
+    if (c.kind !== 'date') {
+      return;
+    }
+    const d = latestDate(rows, c.internalName);
+    if (d && (best === null || d.getTime() > best.getTime())) {
+      best = d;
+    }
+  });
   return best;
 }
 

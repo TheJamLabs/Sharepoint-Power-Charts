@@ -35,6 +35,16 @@ const INSTANCE_SCHEMA: object = {
     },
     useLinkedFilters: { type: 'boolean' },
     debug: { type: 'boolean' },
+    dataAsOfColumn: { type: 'string' },
+    status: {
+      type: 'object',
+      properties: {
+        sourceId: { type: 'string' },
+        keyColumn: { type: 'string' },
+        statusColumn: { type: 'string' }
+      },
+      required: ['sourceId']
+    },
     hub: {
       type: 'object',
       properties: {

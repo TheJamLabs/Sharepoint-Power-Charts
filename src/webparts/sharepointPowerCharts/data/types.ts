@@ -63,6 +63,10 @@ export interface SourceCacheInfo {
   missCount: number;
   /** Total cache hits across the page session, this list. */
   hitCount: number;
+  /** Background refreshes (TTL-expired entries re-fetched without blocking). */
+  refreshCount?: number;
+  /** True when the rows came from the IndexedDB persisted copy (probe-validated). */
+  persisted?: boolean;
   /** When the list was first fetched (ms epoch). */
   firstLoadedAt?: number;
   /** When the most recent load resolved (ms epoch). */
@@ -341,6 +345,36 @@ export interface HubConfig {
 }
 
 /**
+ * Optional measure-register lookup that badges a viewer's card with the
+ * approval status of the measure(s) it shows. The register is a second source
+ * (typically a SharePoint list like DW-EPR-Measure-Register) whose rows map a
+ * measure key — the same codes the block's filters use, e.g. `REF_REFERRALS` —
+ * to a status text. Loaded best-effort: a missing or failing register never
+ * prevents the block itself from rendering.
+ */
+export interface MeasureStatusConfig {
+  /** Source id (from `sources`) whose rows carry measure key -> status. */
+  sourceId: string;
+  /**
+   * Column in the register source holding the measure key, matching
+   * `keyFilterColumn`'s values (default `MeasureKey`). If the register names
+   * its identity column differently (e.g. `publication_key`), keys are still
+   * resolved against it here even though the block filters on another column.
+   */
+  keyColumn?: string;
+  /**
+   * Column in the block's source holding the measure keys the block filters
+   * on. Defaults to `keyColumn`, then `MeasureKey`. Needed when the register's
+   * key column differs from the block-side filter column — e.g. the data list
+   * filters on its `MeasureKey` column while the register stores the same bare
+   * keys under `publication_key`.
+   */
+  keyFilterColumn?: string;
+  /** Column holding the status text (default `Status`). */
+  statusColumn?: string;
+}
+
+/**
  * Configuration for a single web part instance. Contrasts with the older
  * multi-block `ReportConfig`: each instance is either a filter hub or a viewer
  * holding exactly one block, so a page is built by adding the web part many
@@ -359,6 +393,14 @@ export interface InstanceConfig {
   useLinkedFilters?: boolean;
   /** For a viewer: show a diagnostics strip inside the card (loaded/matched/group counts). */
   debug?: boolean;
+  /** For a viewer: badge the card with approval statuses from a measure register. */
+  status?: MeasureStatusConfig;
+  /**
+   * Optional date column whose latest value feeds the "Data as of" card footer
+   * (e.g. `PeriodEnd`). Unset → the latest value across every date column in
+   * the source is used, so the footer works without per-instance setup.
+   */
+  dataAsOfColumn?: string;
   /** For a hub: the dropdown definition. */
   hub?: HubConfig;
 }

@@ -68,6 +68,10 @@ $spc-bad: #c50f1f;
 }
 
 .cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 12px;
 }
 
@@ -78,9 +82,54 @@ $spc-bad: #c50f1f;
   margin: 0;
 }
 
+.statusBadges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.statusBadgeApproved {
+  color: $spc-good;
+  background: rgba(15, 123, 15, 0.1);
+}
+
+.statusBadgeReview {
+  color: #8a5a00;
+  background: rgba(255, 185, 0, 0.15);
+}
+
+.statusBadgeRejected {
+  color: $spc-bad;
+  background: rgba(197, 15, 31, 0.1);
+}
+
+.statusBadgeUnknown {
+  color: $spc-muted;
+  background: rgba(0, 0, 0, 0.06);
+}
+
 .cardBody {
   flex: 1;
   min-height: 0;
+}
+
+.cardFooter {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid $spc-border;
+  color: $spc-muted;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .cardLoading {

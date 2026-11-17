@@ -65,6 +65,17 @@ export function formatCell(value: unknown): string {
   return String(value);
 }
 
+/**
+ * Format a UTC-midnight date as "31 Oct 2026". Built from UTC parts on purpose:
+ * normalizer output is stored as UTC midnights, and `toLocale*` could shift the
+ * day for negative-offset timezones.
+ */
+export function formatDate(value: Date): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const pad = (n: number): string => (n < 10 ? `0${n}` : String(n));
+  return `${pad(value.getUTCDate())} ${months[value.getUTCMonth()]} ${value.getUTCFullYear()}`;
+}
+
 /** A stable palette used for charts, cycling per index. */
 export const CHART_PALETTE: string[] = [
   '#0f6cbd',
