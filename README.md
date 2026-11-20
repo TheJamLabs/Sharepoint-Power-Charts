@@ -8,6 +8,8 @@ Configured entirely in the web part property pane, reports are composed from **b
 
 **Repository:** <https://github.com/TheJamLabs/Sharepoint-Power-Charts> — report issues and feature requests there.
 
+**Help docs:** the full configuration reference — how to build reports and what every property means — lives in [`docs/configuration.md`](docs/configuration.md).
+
 ---
 
 ## Features
