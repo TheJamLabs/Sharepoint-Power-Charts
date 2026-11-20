@@ -14,3 +14,7 @@ config/.env
 *.xlsx
 Example-Data/
 concat
+
+# Agent pipeline / local tooling artifacts — never publish
+.qwen/
+.agents/
