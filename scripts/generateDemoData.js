@@ -1,8 +1,9 @@
 /**
- * Build-time generator: reads the example CSV exports and emits a compact TS
- * module (data/demoData.ts) containing a trimmed slice of the EPR measure
- * data. The demo slice keeps rows as raw strings so the runtime normalizer and
- * query pipeline are exercised exactly like a real CSV import.
+ * Build-time generator: reads the demo CSV export and emits a compact TS
+ * module (data/demoData.ts) containing a trimmed slice of the fictional
+ * retail-chain dataset. The demo slice keeps rows as raw strings so the
+ * runtime normalizer and query pipeline are exercised exactly like a real CSV
+ * import.
  *
  * Run:  node scripts/generateDemoData.js  (Node 18)
  * Output: src/webparts/sharepointPowerCharts/data/demoData.ts
@@ -54,7 +55,7 @@ function parseCsvCsv(text) {
   return rows;
 }
 
-const csvPath = path.join(ROOT, 'Example-Data', 'EPR-Measure-Data.csv');
+const csvPath = path.join(ROOT, 'Example-Data', 'Demo-Retail-Sales.csv');
 const text = fs.readFileSync(csvPath, 'utf8');
 const table = parseCsvCsv(text);
 const header = table[0].map((h) => h.trim());
@@ -102,10 +103,10 @@ const colIdx = cols.map((c) => idx[c]);
 const outRows = slice.map((r) => colIdx.map((ci) => r[ci] !== undefined ? r[ci] : null));
 
 const lines = [];
-lines.push('/** Auto-generated demo dataset derived from Example-Data/EPR-Measure-Data.csv. */');
+lines.push('/** Auto-generated demo dataset derived from Example-Data/Demo-Retail-Sales.csv. */');
 lines.push('// Do not edit by hand — run `node scripts/generateDemoData.js` to regenerate.');
 lines.push('');
-lines.push(`export const DEMO_SOURCE_NAME = 'EPR Measure Data (demo)';`);
+lines.push(`export const DEMO_SOURCE_NAME = 'Northwind Retail (demo)';`);
 lines.push('');
 lines.push('export const DEMO_CSV_HEADER: string[] = ' + JSON.stringify(cols) + ';');
 lines.push('');

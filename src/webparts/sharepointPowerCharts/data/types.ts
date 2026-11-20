@@ -370,7 +370,7 @@ export interface HubConfig {
  * Optional measure-register lookup that badges a viewer's card with the
  * approval status of the measure(s) it shows. The register is a second source
  * (typically a SharePoint list like DW-EPR-Measure-Register) whose rows map a
- * measure key — the same codes the block's filters use, e.g. `REF_REFERRALS` —
+ * measure key — the same codes the block's filters use, e.g. `SAL_TOTAL` —
  * to a status text. Loaded best-effort: a missing or failing register never
  * prevents the block itself from rendering.
  */

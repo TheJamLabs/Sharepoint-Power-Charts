@@ -23,8 +23,8 @@ Configured entirely in the web part property pane, reports are composed from **b
 - **Time intelligence** — day / week / month / quarter / year bucketing, rolling time windows anchored to a linked filter, and a *period columns* picker for side-by-side period comparisons.
 - **Aggregation engine** — in-browser group → bucket → count / sum / avg over REST-fetched rows, with `$filter` pushed to the server.
 - **Portable config** — the whole report is a versioned JSON schema, validated with AJV, exportable and importable through the property pane ("Export config" / "Import").
-- **Presets** — ships with ready-made reports (e.g. the *Referrals dashboard*) over the bundled demo dataset so you can evaluate it in minutes.
-- **Built-in demo** — no SharePoint list needed to try it: the web part bundles a realistic quality-measure dataset and runs the same normalization/query pipeline as live list data.
+- **Presets** — ships with ready-made reports (e.g. the *Sales dashboard*) over the bundled demo dataset so you can evaluate it in minutes.
+- **Built-in demo** — no SharePoint list needed to try it: the web part bundles a fictional retail dataset (clearly not real data) and runs the same normalization/query pipeline as live list data.
 - **Sensible data access** — reads as the current user via REST (no app permissions, `skipFeatureDeployment`), single-flight pagination through `@odata.nextLink`, and a 15-minute in-memory + IndexedDB cache with background refresh and a "Data as of" footer.
 
 ## Getting started
@@ -44,7 +44,7 @@ npm start        # gulp serve — local workbench on https://localhost:4321
 
 > On some rigs the modern `serve` task is not registered by the SPFx build tools; if `npm start` fails with "Task never defined: serve", use `gulp serve-deprecated` instead.
 
-Open the workbench page of any site, add the **SharePoint Power Charts** web part, and it renders the default *Referrals dashboard* preset on the demo dataset immediately.
+Open the workbench page of any site, add the **SharePoint Power Charts** web part, and it renders the default *Sales dashboard* preset on the demo dataset immediately.
 
 Point the web part at a real list in the property pane (*Instance settings*): pick a data source, choose its columns, then configure a block (type → source → measure / group-by). Use the **Export config** button to save and share reports as JSON.
 
@@ -76,7 +76,7 @@ Each web part instance is either a **single-block viewer** or a **filter hub**. 
 - **SharePoint lists** — read through the standard REST API with server-side `$filter` / `$select` and `$top`/`$skip` pagination. The web part only ever requests what the filters ask for.
 - **Deletion/schema changes** — column types are normalized (choice, person, date, numeric, …) into canonical text / number / date / count before aggregation.
 - **5,000-item boundary** — the classic SharePoint REST limit still applies per query; server-side filtering keeps requests inside it for filtered views. Very large lists are best served by making your filters selective.
-- **Demo dataset** — `src/webparts/sharepointPowerCharts/data/demoData.ts` is generated from a CSV exported from a SharePoint list; regenerate it with `node scripts/generateDemoData.js` if you provide your own CSV (the source CSV is intentionally not committed).
+- **Demo dataset** — `src/webparts/sharepointPowerCharts/data/demoData.ts` is generated from a fictional retail CSV (a made-up store chain — none of it is real data); regenerate it with `node scripts/generateDemoData.js` if you provide your own CSV (the source CSV is intentionally not committed).
 
 ## Project structure
 

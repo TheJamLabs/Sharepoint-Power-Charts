@@ -5,7 +5,7 @@ web part configuration means. It is written for the person *configuring* the
 web part (the "power user" / site admin), not for developers.
 
 > This is a **reference**. If you just want a first report in under five
-> minutes, add the web part to a page — it renders the *Referrals dashboard*
+> minutes, add the web part to a page — it renders the *Sales dashboard*
 > preset on the bundled demo data immediately, and you can then point it at
 > your own list.
 
@@ -42,10 +42,11 @@ and contains the same sections:
 Every instance holds its own *source table* — the list of sources it can read.
 A viewer block picks one of them via **Source**.
 
-- **Demo data** — a bundled, realistic dataset (quality-measure records with
-  period, service, measure, value and status columns). It exercises exactly the
-  same pipeline as a live list, so it is ideal for learning. It is always
-  available, even before any list is configured.
+- **Demo data** — a bundled, **fictional** dataset (retail sales records with
+  period, department, measure, value and status columns) for a made-up chain,
+  used here purely as an example. It exercises exactly the same pipeline as a
+  live list, so it is ideal for learning. It is always available, even before
+  any list is configured.
 - **SharePoint list** — a web part can be added to any site and pointed at any
   list the current user can read. Click **Add list source**, pick the list, and
   (optionally) rename it — the name defaults to the list title.
@@ -58,7 +59,7 @@ report shows exactly what that user is allowed to see.
 > ⚠️ **Canonical column names.** Configs reference columns by *internal name*
 > (e.g. `PeriodStart`, `MeasureKey`) — the dropdowns in the editor show
 > friendly display names, so you rarely need to type them. Filter *values*
-> (e.g. a `MeasureKey` equals `REF_REFERRALS`) come from the list's own data:
+> (e.g. a `MeasureKey` equals `SAL_TOTAL`) come from the list's own data:
 > the bundled demo dataset deliberately uses different key values from any
 > live list, so pick filter values from the **actual list** you bound.
 
@@ -99,7 +100,7 @@ chip** comparing the number against the previous period.
 |---|---|
 | **Measure column** | Which numeric column to aggregate. |
 | **Aggregation** | `Sum`, `Count`, `Distinct count`, `Average`, `Min`, `Max`, or `Ratio (num / denom)`. |
-| **Numerator / Denominator column** | Only for `Ratio`: the two columns whose per-row values form the ratio (e.g. load numerator over available-bed denominator). |
+| **Numerator / Denominator column** | Only for `Ratio`: the two columns whose per-row values form the ratio (e.g. orders returned over total orders). |
 | **Compare column** | An optional **date** column used to compute the delta (e.g. `PeriodStart`). |
 | **Compare bucket** | The bucketing for the *previous* period: Day / Week / Month / Quarter / Year. Month is a common choice. |
 | **Color** | Accent colour of the big number / sparkline (a hex value, e.g. `#0f6cbd`). |
@@ -213,7 +214,7 @@ Column OP value   (clauses separated by ',' or 'and')
 Example:
 
 ```
-PeriodStart GE '20200101', MeasureGroup eq 'Referrals'
+PeriodStart GE '20200101', MeasureGroup eq 'Sales'
 ```
 
 The hub also has **Source** (which source's distinct values to read) and an
@@ -262,6 +263,12 @@ maps each measure key to a status text (e.g. "Approved", "In review",
 | **Key filter column** | Column in the *block's source* holding the keys the block filters on. Defaults to the key column, then `MeasureKey`. Needed when the register names its identity column differently — e.g. the data list filters on `MeasureKey` while the register stores the same bare keys under `publication_key`. |
 | **Status column** | Column holding the status text (default `Status`). |
 
+The pane auto-corrects this mapping when the defaults are absent from the
+register: if the register has no `MeasureKey` / `Status` columns, the key and
+status columns are prefilled from what it actually has (e.g. `publication_key`
+/ `GovernanceStatus` on the DW-EPR register) — so badges work without manual
+column picking.
+
 Badge tone is derived from the status text (case-insensitive):
 
 - **Green (approved)** — contains `approved`, `live`, `active`, `current`, `published`, `signed`
@@ -281,6 +288,9 @@ The report configuration is a single **versioned JSON document**
 malformed or incompatible file is rejected with a readable error instead of
 half-applying.
 
+The **?** button in the same footer opens this reference in a dialog inside
+the pane, so the help is one click away without opening the repository.
+
 - **Export config** — downloads the current instance's config (`.json`).
   Use it to back up, copy, or share a report.
 - **Import** — pick a previously exported file. Requires a recognizable
@@ -298,8 +308,8 @@ half-applying.
 ## 10. Presets
 
 When an instance is created it starts from a **preset** — a pre-authored
-report over the demo dataset (e.g. the *Referrals dashboard*: KPI cards, a
-referral trend chart, and a service breakdown). Selecting a preset in the pane
+report over the demo dataset (e.g. the *Sales dashboard*: KPI cards, a sales
+trend chart, and a department breakdown). Selecting a preset in the pane
 **overwrites the current report**, so export first if you have work in
 progress. Presets are the fastest way to learn what each block type can do.
 
@@ -316,19 +326,19 @@ These are real shapes you get from the editor (abridged for readability).
   "schemaVersion": 1,
   "instanceId": "inst-abc123",
   "role": "viewer",
-  "sources": [{ "id": "demo", "kind": "demo", "name": "EPR Measure Data (demo)" }],
+  "sources": [{ "id": "demo", "kind": "demo", "name": "Northwind Retail (demo)" }],
   "useLinkedFilters": true,
   "block": {
     "id": "blk-kpi1",
     "sourceId": "demo",
     "type": "kpi",
-    "title": "Total referrals",
+    "title": "Total sales",
     "layout": { "cols": 4 },
     "color": "#0f6cbd",
     "measure": { "column": "Value", "agg": "sum" },
     "compareColumn": "PeriodStart",
     "compareBucket": "month",
-    "filter": [{ "column": "MeasureKey", "op": "eq", "value": "REF_TOTAL" }]
+    "filter": [{ "column": "MeasureKey", "op": "eq", "value": "SAL_TOTAL" }]
   }
 }
 ```
@@ -346,7 +356,7 @@ These are real shapes you get from the editor (abridged for readability).
     "id": "blk-chart1",
     "sourceId": "demo",
     "type": "chart",
-    "title": "Referral trend",
+    "title": "Sales trend",
     "layout": { "cols": 8 },
     "chart": "line",
     "xColumn": "PeriodStart",
@@ -377,7 +387,7 @@ These are real shapes you get from the editor (abridged for readability).
     "sourceId": "demo",
     "title": "Linked filters",
     "fields": [
-      { "column": "ServiceName", "label": "Service", "searchable": true },
+      { "column": "ServiceName", "label": "Department", "searchable": true },
       { "column": "MeasureGroup", "label": "Measure group" },
       {
         "column": "MonthLabel",
@@ -404,9 +414,10 @@ These are real shapes you get from the editor (abridged for readability).
   refresh, plus an IndexedDB copy, so rapid config edits don't hammer REST and
   charts stay instant. The "Data as of" footer reflects the cached data; the
   debug strip shows whether a load was a cache **HIT** or a fresh **MISS**.
-- **Demo dataset** — the bundled demo is generated from a CSV export
-  (`scripts/generateDemoData.js`); the source CSV is intentionally not part of
-  the repository.
+- **Demo dataset** — the bundled demo is a **fictional** retail dataset for a
+  made-up chain, generated from a CSV export (`scripts/generateDemoData.js`);
+  none of it is real data, and the source CSV is intentionally not part of the
+  repository.
 - **Schema versioning** — configs carry `schemaVersion` so future versions can
   migrate older exports rather than break them; imports are upgraded to the
   current version.

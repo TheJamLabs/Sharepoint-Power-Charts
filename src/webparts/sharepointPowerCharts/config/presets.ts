@@ -1,15 +1,16 @@
 import { ReportConfig, ReportSourceConfig } from '../data/types';
 
 /**
- * Built-in report presets, authored against the bundled EPR demo dataset.
- * Selecting a preset in the property pane overwrites the current report.
+ * Built-in report presets, authored against the bundled fictional retail demo
+ * dataset. Selecting a preset in the property pane overwrites the current
+ * report.
  */
 
 /** Source config shared by every preset (the demo CSV via DemoDataSource). */
 const DEMO_SOURCE: ReportSourceConfig = {
   id: 'demo',
   kind: 'demo',
-  name: 'EPR Measure Data (demo)'
+  name: 'Northwind Retail (demo)'
 };
 
 export interface ReportPreset {
@@ -18,7 +19,7 @@ export interface ReportPreset {
   report: ReportConfig;
 }
 
-export const DEFAULT_PRESET_NAME = 'Referrals dashboard';
+export const DEFAULT_PRESET_NAME = 'Sales dashboard';
 
 function presenter(name: string, blocks: ReportConfig['blocks']): ReportConfig {
   const report: ReportConfig = {
@@ -36,49 +37,49 @@ function presenter(name: string, blocks: ReportConfig['blocks']): ReportConfig {
 export const REPORT_PRESETS: ReportPreset[] = [
   {
     name: DEFAULT_PRESET_NAME,
-    description: 'KPI cards, referral trend, and a service breakdown.',
+    description: 'KPI cards, sales trend, and a department breakdown.',
     report: presenter(DEFAULT_PRESET_NAME, [
       {
-        id: 'kpi-ref-total',
+        id: 'kpi-sales-total',
         sourceId: 'demo',
         type: 'kpi',
-        title: 'Total referrals',
+        title: 'Total sales',
         layout: { cols: 4 },
         color: '#0f6cbd',
         measure: { column: 'Value', agg: 'sum' },
         compareColumn: 'PeriodStart',
         compareBucket: 'month',
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'REF_TOTAL' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'SAL_TOTAL' }]
       },
       {
-        id: 'kpi-ref-new',
+        id: 'kpi-sales-new',
         sourceId: 'demo',
         type: 'kpi',
-        title: 'New patients referred',
+        title: 'New customers',
         layout: { cols: 4 },
         color: '#107c10',
         measure: { column: 'Value', agg: 'sum' },
         compareColumn: 'PeriodStart',
         compareBucket: 'month',
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'REF_NEW_PATIENTS' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'SAL_NEW_CUSTOMERS' }]
       },
       {
-        id: 'kpi-ref-reref',
+        id: 'kpi-sales-returns',
         sourceId: 'demo',
         type: 'kpi',
-        title: 'Re-referred patients',
+        title: 'Orders returned',
         layout: { cols: 4 },
         color: '#d83b01',
         measure: { column: 'Value', agg: 'sum' },
         compareColumn: 'PeriodStart',
         compareBucket: 'month',
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'REF_REREFERRED' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'ORD_RETURNS' }]
       },
       {
         id: 'chart-trend',
         sourceId: 'demo',
         type: 'chart',
-        title: 'Referral trend',
+        title: 'Sales trend',
         layout: { cols: 6 },
         chart: 'line',
         xColumn: 'PeriodStart',
@@ -86,13 +87,13 @@ export const REPORT_PRESETS: ReportPreset[] = [
         agg: 'sum',
         timeBucket: 'month',
         stacked: false,
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'REF_TOTAL' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'SAL_TOTAL' }]
       },
       {
         id: 'chart-monthly',
         sourceId: 'demo',
         type: 'chart',
-        title: 'Monthly referrals',
+        title: 'Monthly sales',
         layout: { cols: 6 },
         chart: 'bar',
         xColumn: 'PeriodStart',
@@ -100,70 +101,70 @@ export const REPORT_PRESETS: ReportPreset[] = [
         agg: 'sum',
         timeBucket: 'month',
         stacked: false,
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'REF_TOTAL' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'SAL_TOTAL' }]
       },
       {
         id: 'chart-by-service',
         sourceId: 'demo',
         type: 'chart',
-        title: 'Referrals by service',
+        title: 'Sales by department',
         layout: { cols: 6 },
         chart: 'donut',
         xColumn: 'ServiceName',
         yColumns: ['Value'],
         agg: 'sum',
         stacked: false,
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'REF_TOTAL' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'SAL_TOTAL' }]
       },
       {
         id: 'chart-by-measure',
         sourceId: 'demo',
         type: 'chart',
-        title: 'Referral volume by type',
+        title: 'Sales volume by type',
         layout: { cols: 6 },
         chart: 'donut',
         xColumn: 'MeasureName',
         yColumns: ['Value'],
         agg: 'sum',
         stacked: false,
-        filter: [{ column: 'MeasureGroup', op: 'eq', value: 'Referrals' }]
+        filter: [{ column: 'MeasureGroup', op: 'eq', value: 'Sales' }]
       },
       {
         id: 'table-services',
         sourceId: 'demo',
         type: 'table',
-        title: 'Referrals by service',
+        title: 'Sales by department',
         layout: { cols: 12 },
         columns: ['ServiceName', 'MeasureName', 'Value'],
         groupBy: 'ServiceName',
         subtotalColumn: 'Value',
         subtotalAgg: 'sum',
         limitRows: 40,
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'REF_TOTAL' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'SAL_TOTAL' }]
       }
     ])
   },
   {
-    name: 'Attendance outlook',
-    description: 'Contacts, attendances and DNA rate across services.',
-    report: presenter('Attendance outlook', [
+    name: 'Store activity outlook',
+    description: 'Visits, orders and the return rate across departments.',
+    report: presenter('Store activity outlook', [
       {
         id: 'kpi-att',
         sourceId: 'demo',
         type: 'kpi',
-        title: 'Total attendances',
+        title: 'Total store visits',
         layout: { cols: 4 },
         color: '#0f6cbd',
         measure: { column: 'Value', agg: 'sum' },
         compareColumn: 'PeriodStart',
         compareBucket: 'month',
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'CONTACT_ATTENDANCES' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'FTF_VISITS' }]
       },
       {
         id: 'kpi-dna',
         sourceId: 'demo',
         type: 'kpi',
-        title: 'DNA rate',
+        title: 'Return rate',
         layout: { cols: 4 },
         color: '#d83b01',
         measure: {
@@ -174,25 +175,25 @@ export const REPORT_PRESETS: ReportPreset[] = [
         },
         compareColumn: 'PeriodStart',
         compareBucket: 'month',
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'CONTACT_DNA_RATE' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'ORD_RETURN_RATE' }]
       },
       {
         id: 'kpi-f2f',
         sourceId: 'demo',
         type: 'kpi',
-        title: 'Face-to-face reviews',
+        title: 'Orders returned',
         layout: { cols: 4 },
         color: '#107c10',
         measure: { column: 'Value', agg: 'sum' },
         compareColumn: 'PeriodStart',
         compareBucket: 'month',
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'CONTACT_F2F_REVIEW' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'ORD_RETURNS' }]
       },
       {
         id: 'chart-att-trend',
         sourceId: 'demo',
         type: 'chart',
-        title: 'Attendance trend',
+        title: 'Visit trend',
         layout: { cols: 12 },
         chart: 'line',
         xColumn: 'PeriodStart',
@@ -200,26 +201,26 @@ export const REPORT_PRESETS: ReportPreset[] = [
         agg: 'sum',
         timeBucket: 'month',
         stacked: false,
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'CONTACT_ATTENDANCES' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'FTF_VISITS' }]
       },
       {
         id: 'chart-att-by-service',
         sourceId: 'demo',
         type: 'chart',
-        title: 'Attendances by service',
+        title: 'Visits by department',
         layout: { cols: 6 },
         chart: 'donut',
         xColumn: 'ServiceName',
         yColumns: ['Value'],
         agg: 'sum',
         stacked: false,
-        filter: [{ column: 'MeasureKey', op: 'eq', value: 'CONTACT_ATTENDANCES' }]
+        filter: [{ column: 'MeasureKey', op: 'eq', value: 'FTF_VISITS' }]
       },
       {
         id: 'chart-contact-mix',
         sourceId: 'demo',
         type: 'chart',
-        title: 'Channel mix',
+        title: 'Order channel mix',
         layout: { cols: 6 },
         chart: 'bar',
         xColumn: 'MeasureName',
@@ -227,7 +228,7 @@ export const REPORT_PRESETS: ReportPreset[] = [
         agg: 'sum',
         stacked: false,
         filter: [
-          { column: 'MeasureKey', op: 'in', value: ['CONTACT_TELEPHONE', 'CONTACT_GROUP_ATTENDANCE', 'CONTACT_F2F_REVIEW'] }
+          { column: 'MeasureKey', op: 'in', value: ['ORD_IN_STORE', 'ORD_ONLINE', 'ORD_RETURNS'] }
         ]
       }
     ])
@@ -240,7 +241,7 @@ export const REPORT_PRESETS: ReportPreset[] = [
         id: 'kpi-total',
         sourceId: 'demo',
         type: 'kpi',
-        title: 'Reported events (all measures)',
+        title: 'Reported values (all measures)',
         layout: { cols: 12 },
         color: '#0f6cbd',
         measure: { column: 'Value', agg: 'sum' },
@@ -251,7 +252,7 @@ export const REPORT_PRESETS: ReportPreset[] = [
         id: 'table-explorer',
         sourceId: 'demo',
         type: 'table',
-        title: 'All measures by group & service',
+        title: 'All measures by group & department',
         layout: { cols: 12 },
         columns: ['PeriodStart', 'ServiceName', 'MeasureName', 'AggregationType', 'Value'],
         groupBy: 'MeasureGroup',

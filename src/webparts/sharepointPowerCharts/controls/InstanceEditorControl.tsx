@@ -35,6 +35,7 @@ import { AGGREGATION_LABELS, FILTER_OPERATOR_LABELS, TIME_BUCKET_LABELS } from '
 import { DEMO_CSV_HEADER } from '../data/demoData';
 import { cloneInstance, emptyBlock, parseInstanceConfig, serializeInstanceConfig } from '../config/instanceConfig';
 import { shortId } from '../config/configStore';
+import HelpDialog from '../help/HelpDialog';
 
 /** Lightweight shape for a SharePoint list exposed by the caller (web part). */
 export interface SharePointListInfo {
@@ -77,6 +78,8 @@ interface InstanceEditorState {
   /** Column names of the configured status register source (for its column pickers). */
   statusColumns: string[];
   statusColumnsSourceId?: string;
+  /** The in-pane "?" configuration help dialog. */
+  helpOpen: boolean;
 }
 
 /** A temporary default config when the stored value cannot be parsed. */
@@ -85,7 +88,7 @@ function fallbackConfig(): InstanceConfig {
     schemaVersion: 1,
     instanceId: 'inst-' + shortId(),
     role: 'viewer',
-    sources: [{ id: 'demo', kind: 'demo', name: 'EPR Measure Data (demo)' }],
+    sources: [{ id: 'demo', kind: 'demo', name: 'Northwind Retail (demo)' }],
     useLinkedFilters: true,
     block: emptyBlock('kpi', 'demo')
   };
@@ -101,7 +104,8 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
       config: parsed.config ? parsed.config : fallbackConfig(),
       columns: DEMO_CSV_HEADER.slice(),
       columnsLoading: false,
-      statusColumns: []
+      statusColumns: [],
+      helpOpen: false
     };
     this.fileInputRef = React.createRef<HTMLInputElement>();
   }
@@ -177,6 +181,7 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
       (names) => {
         if (this.state.statusColumnsSourceId === sid) {
           this.setState({ statusColumns: names });
+          this.repairStatusColumns(names);
         }
       },
       () => {
@@ -340,6 +345,69 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
     }
     config.status = { ...config.status, ...patch };
     this.commit(config);
+  }
+
+  /**
+   * Auto-correct the register column mapping against the register's real
+   * columns when the built-in defaults don't exist there. The defaults
+   * (`MeasureKey` key column, `Status` status column) suit typical registers,
+   * but the live DW-EPR-Measure-Register names them `publication_key` and
+   * `GovernanceStatus` — with the defaults the register loads, matches zero
+   * keys, and no badges render. A deliberately configured column is never
+   * overwritten; only a missing default is repaired, and only once per pick.
+   */
+  private repairStatusColumns(columns: string[]): void {
+    const status = this.state.config.status;
+    if (!status || columns.length === 0) {
+      return;
+    }
+    const has = (c: string): boolean => columns.indexOf(c) !== -1;
+    const patch: Partial<MeasureStatusConfig> = {};
+
+    const keyCurrent = status.keyColumn || 'MeasureKey';
+    if (!has(keyCurrent)) {
+      let keyBetter: string | undefined;
+      if (status.keyFilterColumn && has(status.keyFilterColumn)) {
+        keyBetter = status.keyFilterColumn;
+      } else if (has('publication_key')) {
+        keyBetter = 'publication_key';
+      } else if (has(keyCurrent)) {
+        keyBetter = keyCurrent;
+      } else {
+        keyBetter = columns.find((c) => /key|code|identifier/i.test(c));
+      }
+      if (keyBetter && keyBetter !== keyCurrent) {
+        patch.keyColumn = keyBetter;
+      }
+    }
+
+    const statusCurrent = status.statusColumn || 'Status';
+    if (!has(statusCurrent)) {
+      let statusBetter: string | undefined;
+      if (has('GovernanceStatus')) {
+        statusBetter = 'GovernanceStatus';
+      } else if (has(statusCurrent)) {
+        statusBetter = statusCurrent;
+      } else {
+        statusBetter = columns.find((c) => /status|approval|state/i.test(c));
+      }
+      if (statusBetter && statusBetter !== statusCurrent) {
+        patch.statusColumn = statusBetter;
+      }
+    }
+
+    if (patch.keyColumn || patch.statusColumn) {
+      const config = cloneInstance(this.state.config); // deep clone, safe to mutate
+      if (config.status) {
+        if (patch.keyColumn) {
+          config.status.keyColumn = patch.keyColumn;
+        }
+        if (patch.statusColumn) {
+          config.status.statusColumn = patch.statusColumn;
+        }
+      }
+      this.commit(config);
+    }
   }
 
   private aggOptions(): { key: string; text: string; title?: string }[] {
@@ -1096,6 +1164,13 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
         {this.props.fetchLists ? this.renderListPicker() : null}
 
         <Stack horizontal tokens={{ childrenGap: 8 }} styles={{ root: { marginTop: 16, ...WRAP_ROW.root } }}>
+          <IconButton
+            iconProps={{ iconName: 'Help' }}
+            title="Configuration help"
+            ariaLabel="Configuration help"
+            styles={{ root: { marginTop: 3 } }}
+            onClick={() => this.setState({ helpOpen: true })}
+          />
           <DefaultButton text="Export config" onClick={() => this.exportJson()} />
           <DefaultButton text="Import" onClick={() => this.fileInputRef.current && this.fileInputRef.current.click()} />
         </Stack>
@@ -1107,6 +1182,7 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
           onChange={(e) => this.onImportFile(e.target.files ? e.target.files[0] : undefined)}
         />
         {this.state.importError ? <div style={{ color: '#c50f1f' }}>{this.state.importError}</div> : null}
+        <HelpDialog open={this.state.helpOpen} onDismiss={() => this.setState({ helpOpen: false })} />
       </div>
     );
   }

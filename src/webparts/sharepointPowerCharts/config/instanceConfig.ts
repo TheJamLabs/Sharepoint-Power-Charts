@@ -180,7 +180,7 @@ export function defaultKpiBlock(sourceId: string): BlockConfig {
     id,
     sourceId,
     type: 'kpi',
-    title: 'Total referrals',
+    title: 'Total sales',
     layout: { cols: 12 },
     color: '#0f6cbd',
     measure: { column: 'Value', agg: 'sum' },
@@ -198,7 +198,7 @@ export function createDefaultInstanceConfig(role: InstanceRole): InstanceConfig 
       instanceId: 'inst-' + shortId(),
       role,
       sources,
-      hub: { sourceId: 'demo', title: 'Linked filters', fields: [{ column: 'ServiceName', label: 'Service' }, { column: 'MeasureGroup', label: 'Measure group' }] }
+      hub: { sourceId: 'demo', title: 'Linked filters', fields: [{ column: 'ServiceName', label: 'Department' }, { column: 'MeasureGroup', label: 'Measure group' }] }
     };
   }
   return {
