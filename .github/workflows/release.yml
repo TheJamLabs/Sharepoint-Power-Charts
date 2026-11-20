@@ -96,12 +96,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version-check.outputs.version }}
         run: |
-          PREV_SHA=""
-          if gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.target_commitish' > /tmp/prev.txt 2>/dev/null; then
-            PREV_SHA=$(cat /tmp/prev.txt)
+          # releases/latest returns target_commitish as a branch name, not a
+          # SHA, so resolve the range from the previous release's TAG instead
+          # (tags are fully fetched via fetch-depth: 0).
+          PREV_TAG=""
+          if gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.tag_name' > /tmp/prev_tag.txt 2>/dev/null; then
+            PREV_TAG=$(cat /tmp/prev_tag.txt)
           fi
-          if [ -n "$PREV_SHA" ]; then
-            NOTES=$(git log --oneline --no-merges "$PREV_SHA..HEAD")
+          if [ -n "$PREV_TAG" ]; then
+            NOTES=$(git log --oneline --no-merges "$PREV_TAG..HEAD")
           else
             NOTES=$(git log --oneline --no-merges)
           fi
