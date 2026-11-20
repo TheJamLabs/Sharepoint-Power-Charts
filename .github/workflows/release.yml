@@ -1,0 +1,109 @@
+name: Release
+
+# A push to main (or a manual "Run workflow") verifies the solution version
+# was bumped past the last release, builds the ship .sppkg, and publishes it
+# as a GitHub Release. The gate lives in scripts/check-release-version.js so
+# the same check runs locally.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '18.20.8'
+
+jobs:
+  version-check:
+    name: Verify version bump
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Resolve latest release tag
+        id: latest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LATEST=""
+          if gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.tag_name' > /tmp/latest.txt 2>/dev/null; then
+            LATEST=$(sed 's/^v//' /tmp/latest.txt)
+          fi
+          echo "tag=$LATEST" >> "$GITHUB_OUTPUT"
+
+      - name: Run release gate
+        shell: bash
+        run: node scripts/check-release-version.js "${{ steps.latest.outputs.tag }}"
+
+      - name: Emit solution version
+        id: version
+        run: node -e "console.log('version=' + require('./config/package-solution.json').solution.version)" >> $env:GITHUB_OUTPUT
+
+  build:
+    name: Build ship .sppkg
+    needs: version-check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx gulp bundle --ship
+
+      - run: npx gulp package-solution --ship
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sppkg
+          path: sharepoint/solution/sharepoint-power-charts.sppkg
+
+  release:
+    name: Publish GitHub Release
+    needs: [version-check, build]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sppkg
+          path: sharepoint/solution
+
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version-check.outputs.version }}
+        run: |
+          PREV_SHA=""
+          if gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.target_commitish' > /tmp/prev.txt 2>/dev/null; then
+            PREV_SHA=$(cat /tmp/prev.txt)
+          fi
+          if [ -n "$PREV_SHA" ]; then
+            NOTES=$(git log --oneline --no-merges "$PREV_SHA..HEAD")
+          else
+            NOTES=$(git log --oneline --no-merges)
+          fi
+          gh release create "v${VERSION}" sharepoint/solution/sharepoint-power-charts.sppkg \
+            --title "v${VERSION}" --notes "$NOTES"

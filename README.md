@@ -8,6 +8,8 @@ Configured entirely in the web part property pane, reports are composed from **b
 
 **Repository:** <https://github.com/TheJamLabs/Sharepoint-Power-Charts> — report issues and feature requests there.
 
+![Release](https://github.com/TheJamLabs/Sharepoint-Power-Charts/actions/workflows/release.yml/badge.svg)
+
 **Help docs:** the full configuration reference — how to build reports and what every property means — lives in [`docs/configuration.md`](docs/configuration.md).
 
 ---
@@ -56,6 +58,8 @@ npx gulp package-solution --ship   # emits solution/sharepoint-power-charts.sppk
 ```
 
 Upload the `.sppkg` to the tenant app catalog and add the web part to any site. No tenant-wide permissions are requested — the web part reads exactly what the signed-in user can already see.
+
+> **CI/CD** — every push to `main` runs the [release pipeline](.github/workflows/release.yml): it blocks unless `config/package-solution.json` `solution.version` was bumped past the last release (with `package.json` matching), then builds the ship package and publishes the `.sppkg` as a GitHub Release. Bump the version in your commit to publish.
 
 ## How it works
 
