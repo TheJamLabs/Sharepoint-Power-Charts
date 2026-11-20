@@ -200,10 +200,22 @@ export interface ChartLegendConfig {
  * Rolling time window: instead of an absolute X axis, bucket `windowColumn` (a
  * date) into exactly `lookback` buckets ending at the linked-filter value on
  * `anchorColumn` (e.g. "Jul 2026"). The anchor drives the window's end; gap
- * buckets are zero-filled so the axis always shows `lookback` even ticks.
+ * buckets are zero-filled so the axis always shows `lookback` even ticks. When
+ * the hub links extra columns as well (e.g. FY/quarter period filters), the
+ * window instead ends at the filtered rows' latest `windowColumn` date — the
+ * filter set is the window end and `lookback` is the span back from it.
+ * With `periodColumns`, though, the named columns only position the end — they
+ * are excluded from the row filters, so the chart still renders the full
+ * `lookback` months of data back from the selected period instead of narrowing
+ * to the period's own rows (e.g. selecting FY 2026/27 + Q2 ends the window at
+ * Sep 2026 and draws all 12 months back from it).
  */
 export interface ChartTimeWindow {
-  /** Linked filter store column whose selected value is the window's end anchor. */
+  /**
+   * Linked filter store column whose selected value is the window's end anchor.
+   * Not used for the end while other linked period filters are active — the
+   * window then ends at the filtered rows' latest `windowColumn` date.
+   */
   anchorColumn: string;
   /** Date column to bucket into the time series (e.g. PeriodStart). */
   windowColumn: string;
@@ -211,6 +223,16 @@ export interface ChartTimeWindow {
   bucket: TimeBucket;
   /** Number of buckets to show, ending at the anchor (e.g. 12, 24, 7, 30). */
   lookback: number;
+  /**
+   * Optional linked columns that position the window end instead of filtering
+   * the rows (same role as `anchorColumn`). When any of them holds a linked
+   * value, the window ends at the latest `windowColumn` date among rows
+   * matching the block filters plus those values — the "end of the selected
+   * period" — and the chart renders `lookback` buckets of data back from it.
+   * Omit to keep the default rule (end at the filtered rows' latest
+   * `windowColumn` date).
+   */
+  periodColumns?: string[];
 }
 
 export interface ChartBlockConfig extends BlockBaseConfig {

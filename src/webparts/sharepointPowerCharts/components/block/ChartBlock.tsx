@@ -14,9 +14,14 @@ export interface ChartBlockProps {
   /** Rows already filtered (global + block) for this source. */
   rows: DataRow[];
   /**
-   * Resolved end-of-window anchor for a `timeWindow` chart (the linked-filter
-   * value parsed to a Date). When null/omitted the chart falls back to the
-   * latest date found in the rows — so a window chart is never empty on load.
+   * Resolved end-of-window anchor for a `timeWindow` chart: the linked-filter
+   * value parsed to a Date; or — when other linked filters (e.g. FY/quarter)
+   * narrow the rows — the filtered rows' latest `windowColumn` date; or — when
+   * `timeWindow.periodColumns` are linked (e.g. FinancialYear + FinancialQuarter)
+   * — the latest `windowColumn` date among rows matching the block filters plus
+   * those period values, i.e. the end of the selected period. When null/omitted
+   * the chart falls back to the latest date found in the rows — so a window
+   * chart is never empty on load.
    */
   anchorDate?: Date | null;
 }

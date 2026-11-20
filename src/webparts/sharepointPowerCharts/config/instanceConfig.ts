@@ -41,6 +41,7 @@ const INSTANCE_SCHEMA: object = {
       properties: {
         sourceId: { type: 'string' },
         keyColumn: { type: 'string' },
+        keyFilterColumn: { type: 'string' },
         statusColumn: { type: 'string' }
       },
       required: ['sourceId']
@@ -90,7 +91,8 @@ const INSTANCE_SCHEMA: object = {
             anchorColumn: { type: 'string' },
             windowColumn: { type: 'string' },
             bucket: { enum: ['day', 'week', 'month', 'quarter', 'year', 'none'] },
-            lookback: { type: 'integer', minimum: 1 }
+            lookback: { type: 'integer', minimum: 1 },
+            periodColumns: { type: 'array', items: { type: 'string' } }
           },
           required: ['anchorColumn', 'windowColumn', 'bucket', 'lookback']
         },

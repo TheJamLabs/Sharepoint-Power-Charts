@@ -596,6 +596,14 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
         yOpts.push({ key: c, text: c, title: c });
       }
     });
+    const pOpts = this.columnDropdownOptions(false);
+    if (win && win.periodColumns) {
+      win.periodColumns.forEach((c) => {
+        if (c && !pOpts.some((o) => o.key === c)) {
+          pOpts.push({ key: c, text: c, title: c });
+        }
+      });
+    }
     const legend = block.legend || { show: false, position: 'bottom' };
     return (
       <>
@@ -658,7 +666,8 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
                     anchorColumn: win ? win.anchorColumn : '',
                     windowColumn: win ? win.windowColumn : block.xColumn,
                     bucket: win ? win.bucket : 'month',
-                    lookback: win ? win.lookback : 12
+                    lookback: win ? win.lookback : 12,
+                    periodColumns: win ? win.periodColumns : undefined
                   }
                 : undefined
             })
@@ -681,6 +690,21 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
               onChange={(_e, opt) => opt && this.patchWindow({ anchorColumn: String(opt.key) })}
             />
             <Dropdown
+              label="Period columns (optional)"
+              disabled={colDisabled}
+              multiSelect
+              placeholder="None — window ends at the linked-filter month"
+              options={pOpts}
+              selectedKeys={(win.periodColumns || []).filter((c) => pOpts.some((o) => o.key === c))}
+              onChange={(_e, opt) => {
+                if (!opt) {
+                  return;
+                }
+                const cur = (win.periodColumns || []).filter((c) => c !== String(opt.key));
+                this.patchWindow({ periodColumns: opt.selected ? [...cur, String(opt.key)] : cur });
+              }}
+            />
+            <Dropdown
               label="Window bucket"
               options={this.bucketOptions().filter((b) => b.key !== 'none')}
               selectedKey={win.bucket}
@@ -694,7 +718,9 @@ export default class InstanceEditorControl extends React.Component<InstanceEdito
             />
             <div style={{ color: '#a19f9d', fontSize: 12, marginTop: 4 }}>
               Shows the last {win.lookback} bucket(s) ending at the value selected in the linked filter for &quot;{win.anchorColumn || '…'}&quot;
-              (e.g. pick Jul 2026 to see the 12 months up to it). With no selection it falls back to the latest date in the data.
+              (e.g. pick Jul 2026 to see the 12 months up to it). Period columns (e.g. FinancialYear + FinancialQuarter) end the window at the
+              selected period without filtering the history rows, so the full {win.lookback} months of data still render. With no selection it
+              falls back to the latest date in the data.
             </div>
           </>
         )}

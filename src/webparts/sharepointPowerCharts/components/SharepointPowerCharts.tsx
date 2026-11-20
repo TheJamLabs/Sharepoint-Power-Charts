@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Spinner } from '@fluentui/react';
-import { DataRow, FilterClause, IDataSource, InstanceConfig, LoadedSource, BlockConfig, SourceCacheInfo, FILTER_OPERATOR_LABELS, AGGREGATION_LABELS } from '../data/types';
+import { DataRow, FilterClause, IDataSource, InstanceConfig, LoadedSource, BlockConfig, ChartTimeWindow, SourceCacheInfo, FILTER_OPERATOR_LABELS, AGGREGATION_LABELS } from '../data/types';
 import { applyFilters, buildChartSeries, buildWindowedChartSeries, latestDataTimestamp, latestDate, parseAnchorToDate } from '../data/query';
 import { formatDate } from '../utils/format';
 import { linkedFilterStore } from '../filter/filterStore';
@@ -344,12 +344,17 @@ export default class SharepointPowerCharts extends React.Component<SharepointPow
       clauses.push(...block.filter);
     }
     if (config.useLinkedFilters) {
-      // A time-window chart treats its anchor column as the window's end, not
-      // as an equals filter — otherwise the axis would collapse to one bucket.
-      const anchor = block.type === 'chart' && block.timeWindow ? block.timeWindow.anchorColumn : undefined;
+      // A time-window chart treats its anchor column — and any `periodColumns`
+      // (e.g. FY/quarter) — as window-positioning inputs, not equals filters:
+      // otherwise the axis would collapse to the selected period's own rows.
+      const skip = new Set<string>();
+      if (block.type === 'chart' && block.timeWindow) {
+        skip.add(block.timeWindow.anchorColumn);
+        (block.timeWindow.periodColumns || []).forEach((c) => skip.add(c));
+      }
       const snapshot = linkedFilterStore.snapshot();
       Object.keys(snapshot).forEach((c) => {
-        if (c !== anchor) {
+        if (!skip.has(c)) {
           clauses.push({ column: c, op: 'eq', value: snapshot[c] });
         }
       });
@@ -362,12 +367,81 @@ export default class SharepointPowerCharts extends React.Component<SharepointPow
     return applyFilters(base, this.activeClauses(block));
   }
 
-  /** The resolved window-end anchor for a chart block, from the linked store. */
+  /**
+   * True when the linked store holds values on columns other than `anchorColumn`
+   * (relevant only for a viewer that applies linked filters). Any co-filter —
+   * typically an FY/quarter field on the hub — narrows the rows, so the rolling
+   * window must end where that filtered data ends rather than at the anchor
+   * month's value, which may sit beyond the filtered set.
+   */
+  private hasCoFilters(anchorColumn: string): boolean {
+    if (!this.props.config.useLinkedFilters) {
+      return false;
+    }
+    return Object.keys(linkedFilterStore.snapshot()).some((c) => c !== anchorColumn);
+  }
+
+  /**
+   * The linked `timeWindow.periodColumns` that currently hold a value in the
+   * shared store. These position the window end (like `anchorColumn`) but were
+   * excluded from the row filters, so the chart keeps its full history.
+   */
+  private linkedPeriodColumns(win: ChartTimeWindow): string[] {
+    if (!this.props.config.useLinkedFilters || !win.periodColumns || win.periodColumns.length === 0) {
+      return [];
+    }
+    const snapshot = linkedFilterStore.snapshot();
+    return win.periodColumns.filter((c) => {
+      if (c === win.anchorColumn) {
+        return false;
+      }
+      const v = snapshot[c];
+      return v !== undefined && v !== null && String(v).trim() !== '';
+    });
+  }
+
+  /**
+   * Window end when `periodColumns` are linked: the latest `windowColumn` date
+   * among rows matching the block filters plus those period values — i.e. the
+   * end of the selected period. Null when no period column is linked or no row
+   * matches them (e.g. an as-yet-unpopulated future quarter), so callers fall
+   * back to the default rule.
+   */
+  private periodWindowEnd(block: BlockConfig, win: ChartTimeWindow): Date | null {
+    const periods = this.linkedPeriodColumns(win);
+    if (periods.length === 0) {
+      return null;
+    }
+    const snapshot = linkedFilterStore.snapshot();
+    const periodClauses: FilterClause[] = periods.map((c) => ({ column: c, op: 'eq', value: snapshot[c] }));
+    return latestDate(applyFilters(this.blockRows(block), periodClauses), win.windowColumn);
+  }
+
+  /**
+   * The resolved window-end anchor for a chart block. Normally the linked
+   * store's value on `timeWindow.anchorColumn` parsed to a Date. When `periodColumns`
+   * (e.g. FY/quarter) are linked, the window ends at the selected period's end —
+   * the latest `windowColumn` date among rows matching the block filters and
+   * those period values — with the configured `lookback` as the span back from
+   * it. When the hub links other columns instead (no `periodColumns`), the
+   * filter set is the window end: the anchor re-anchors at the filtered rows'
+   * latest `windowColumn` date, keeping `lookback` as the span — so a 12-month
+   * window shows the 12 months back from the filtered period instead of
+   * collapsing around a stale anchor month.
+   */
   private windowAnchor(block: BlockConfig): Date | null {
     if (!(block.type === 'chart' && block.timeWindow)) {
       return null;
     }
-    return parseAnchorToDate(linkedFilterStore.getValue(block.timeWindow.anchorColumn));
+    const win = block.timeWindow;
+    const periodEnd = this.periodWindowEnd(block, win);
+    if (periodEnd) {
+      return periodEnd;
+    }
+    if (this.hasCoFilters(win.anchorColumn)) {
+      return latestDate(this.blockRows(block), win.windowColumn);
+    }
+    return parseAnchorToDate(linkedFilterStore.getValue(win.anchorColumn));
   }
 
   /** Case-insensitive set of loaded column internal names, for presence checks. */
@@ -459,7 +533,17 @@ export default class SharepointPowerCharts extends React.Component<SharepointPow
       if (block.timeWindow) {
         const anchor = this.windowAnchor(block) || latestDate(rows, block.timeWindow.windowColumn);
         const anchorLabel = anchor ? anchor.toISOString().slice(0, 7) : 'none';
-        lines.push(`Window: ${block.timeWindow.lookback}×${block.timeWindow.bucket} ending ${anchorLabel} (anchor column ${block.timeWindow.anchorColumn})`);
+        const periodCols = this.linkedPeriodColumns(block.timeWindow);
+        const reAnchored = this.hasCoFilters(block.timeWindow.anchorColumn);
+        const mode =
+          periodCols.length > 0
+            ? `, period end: ${periodCols.join(', ')}`
+            : reAnchored
+              ? ', re-anchored: co-filters active'
+              : '';
+        lines.push(
+          `Window: ${block.timeWindow.lookback}×${block.timeWindow.bucket} ending ${anchorLabel} (anchor column ${block.timeWindow.anchorColumn}${mode})`
+        );
       }
       lines.push(`X groups: ${res.labels.length}`);
     } else if (block.type === 'kpi') {
